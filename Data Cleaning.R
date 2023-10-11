@@ -1,5 +1,6 @@
 ### --- Import Packages Stage --- ----------------------------------------------
-library(tidyverse) ## Read File, Then Pivot...
+library(tidyverse)
+library(ggcorrplot)
 
 ### --- Data Import Stage --- --------------------------------------------------
 ## Educational Expenditure ; Source: World Bank
@@ -82,3 +83,22 @@ eur_slm <- c("AUT", "BEL", "BGR",        "CYP",    "DNK",        "FIN", "FRA",
          "POL", "PRT", "ROU",               "ESP", "SWE", "GBR")
 comb_eur_slm <- comb_eur %>% filter(countrycode %in% eur_slm)
 write.csv(comb_eur_slm, "~/GitHub/ecox-5004-analysis/combined_eur_slm.csv", row.names = FALSE)
+
+## Summary Statistics
+sum <- comb_eur_slm %>% select(`rgdpo.pop`, `log.rgdpo.pop`, year_orig, yrs_sch, voc,
+                          gen, avh, csh_x, fdi, ctfp)
+summary <- summary(sum) %>% as.data.frame()
+sd(sum$ctfp, na.rm = TRUE) # Change As Needed
+
+## Summary Statistics Plots
+ggplot2::ggplot(data = comb_eur_slm, aes(x = yrs_sch, fill = as.factor(year), colour = as.factor(year))) +
+  geom_density(alpha = 0.1) + theme_minimal() # School Years Plot
+
+corr <- as.data.frame(comb_eur_slm) %>%
+  select(rgdpo.pop, log.rgdpo.pop, year_orig, yrs_sch, voc, gen, csh_x, fdi) %>% cor() %>% round(2)
+p.mat <- as.data.frame(comb_eur_slm) %>%
+  select(rgdpo.pop, log.rgdpo.pop, year_orig, yrs_sch, voc, gen, csh_x, fdi) %>% cor_pmat()
+ggcorrplot::ggcorrplot(corr = corr, type = "lower", hc.order = TRUE,
+  ggtheme = ggplot2::theme_gray, colors = c("#6D9EC1", "white", "#E46726")) +
+  theme_minimal() + theme(axis.title.x = element_blank(), axis.title.y = element_blank()) +
+  ggtitle("Cross-Correlation Matrix")
