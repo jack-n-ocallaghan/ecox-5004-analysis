@@ -54,12 +54,17 @@ comb <- full_join(comb, fdi, c("year", "countrycode", "country"))
 comb <- full_join(comb, voc, c("year", "countrycode", "country"))
 comb <- full_join(comb, gen, c("year", "countrycode", "country"))
 
-years <- c(1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015)
+years <- seq(1965, 2015, 1)
+years_five <- seq(1970, 2015, 5)
 
-comb <- comb %>% filter(year %in% years) %>%
-  mutate(year_orig = year - 1970) %>% mutate(log.rgdpo.pop = log(rgdpo.pop)) %>%
-  group_by(countrycode) %>%
-  mutate(fdi = ifelse(is.na(fdi), median(fdi, na.rm = TRUE), fdi)) %>% ungroup()
+comb <- comb %>%
+  filter(year %in% years) %>%
+  mutate(year_orig = year - 1970) %>% group_by(countrycode) %>%
+  filter(countrycode %in% eur) %>%
+  mutate(rgdpo.pop.roll = zoo::rollmeanr(rgdpo.pop, k = 5, align = "center", fill = NA)) %>%
+  mutate(log.rgdpo.pop = log(rgdpo.pop)) %>%
+  mutate(fdi = ifelse(is.na(fdi), median(fdi, na.rm = TRUE), fdi)) %>%
+  filter(year %in% years_five) %>% ungroup()
 ## The following European countries contained NA values and were subject to median imputation:
 ## "Bulgaria"       "Cyprus"         "Czech Republic" "Germany"        "Estonia"        "Croatia"        "Hungary"        "Lithuania"     
 ## "Luxembourg"     "Latvia"         "Poland"         "Romania"        "Slovakia"       "Slovenia"       "Czechia"   
@@ -83,12 +88,15 @@ eur_slm <- c("AUT", "BEL", "BGR",        "CYP",    "DNK",        "FIN", "FRA",
          "POL", "PRT", "ROU",               "ESP", "SWE", "GBR")
 comb_eur_slm <- comb_eur %>% filter(countrycode %in% eur_slm)
 write.csv(comb_eur_slm, "~/GitHub/ecox-5004-analysis/combined_eur_slm.csv", row.names = FALSE)
+# Some Median Imputation at the End Manually in Excel
 
 ## Summary Statistics
 sum <- comb_eur_slm %>% select(`rgdpo.pop`, `log.rgdpo.pop`, year_orig, yrs_sch, voc,
                           gen, avh, csh_x, fdi, ctfp)
 summary <- summary(sum) %>% as.data.frame()
 sd(sum$ctfp, na.rm = TRUE) # Change As Needed
+
+## 
 
 ## Summary Statistics Plots
 ggplot2::ggplot(data = comb_eur_slm, aes(x = yrs_sch, fill = as.factor(year), colour = as.factor(year))) +
